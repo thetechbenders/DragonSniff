@@ -86,11 +86,13 @@ jobs:
           if test "$PROMOTION_TARGET" = version; then
             target_ref="$IMAGE_NAME:$RELEASE_VERSION"
             registry_token="$(curl --fail --silent --show-error \
+              --http1.1 --retry 3 --retry-all-errors --retry-delay 2 \
               --user "$GITHUB_ACTOR:$GHCR_TOKEN" \
               'https://ghcr.io/token?service=ghcr.io&scope=repository:danielbrownjr/dragonsniff:pull,push' \
               | jq -r .token)"
             headers="$(mktemp)"
             status="$(curl --silent --show-error --output /dev/null \
+              --http1.1 --retry 3 --retry-all-errors --retry-delay 2 \
               --dump-header "$headers" --write-out '%{http_code}' \
               --request HEAD \
               --header "Authorization: Bearer $registry_token" \
