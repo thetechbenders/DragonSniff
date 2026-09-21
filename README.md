@@ -178,3 +178,7 @@ HTTPS deployment and the remaining Brave download warning are tracked in [Issue 
 ## Name
 
 Yes, it is called **DragonSniff**. No, we are not apologizing for that.
+
+## License
+
+DragonSniff is available under the [MIT License](LICENSE), matching DragonBreath and the wider Dragon-family tooling.
