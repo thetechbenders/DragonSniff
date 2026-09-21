@@ -136,7 +136,7 @@ The active-run downloads remain available. With persistent storage enabled, **Hi
 
 ## Documentation
 
-- [Getting started and concepts](https://github.com/danielbrownjr/DragonSniff/wiki)
+- [Getting started and concepts](https://github.com/thetechbenders/DragonSniff/wiki)
 - [Passive thermal capture](docs/thermal-capture.md)
 - [Operator annotations](docs/operator-annotations.md)
 - [Optional PrusaLink observations](docs/prusalink-observation.md)
@@ -171,7 +171,7 @@ DragonSniff is developer tooling at version 0.4.0. Live observation, bounded SSE
 
 The tool does not provide actuator controls, settings editing, PID tuning, OTA, provisioning, cloud telemetry, or safety policy. Device firmware remains responsible for authentication, validation, interlocks, and safe behavior.
 
-HTTPS deployment and the remaining Brave download warning are tracked in [Issue #26](https://github.com/danielbrownjr/DragonSniff/issues/26). Current and deferred container work is summarized in the [server and container status](docs/server-docker-roadmap.md).
+HTTPS deployment and the remaining Brave download warning are tracked in [Issue #26](https://github.com/thetechbenders/DragonSniff/issues/26). Current and deferred container work is summarized in the [server and container status](docs/server-docker-roadmap.md).
 
 > **Is this scope creep? Yes. Anyway.**
 
