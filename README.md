@@ -144,6 +144,7 @@ The active-run downloads remain available. With persistent storage enabled, **Hi
 - [Bounded SSE churn runner](docs/churn-runner.md)
 - [Dragon API findings](docs/dragon-api-findings.md)
 - [Hardware validation](docs/hardware-validation.md)
+- [LAN HTTPS validation](docs/lan-https-validation.md)
 - [Portainer trusted-LAN deployment](docs/portainer.md)
 - [Server and container status](docs/server-docker-roadmap.md)
 
@@ -171,7 +172,7 @@ DragonSniff is developer tooling at version 0.4.0. Live observation, bounded SSE
 
 The tool does not provide actuator controls, settings editing, PID tuning, OTA, provisioning, cloud telemetry, or safety policy. Device firmware remains responsible for authentication, validation, interlocks, and safe behavior.
 
-HTTPS deployment and the remaining Brave download warning are tracked in [Issue #26](https://github.com/thetechbenders/DragonSniff/issues/26). Current and deferred container work is summarized in the [server and container status](docs/server-docker-roadmap.md).
+The Brave LAN-download warning and one supported trusted-LAN HTTPS topology are validated and documented in [LAN HTTPS validation](docs/lan-https-validation.md) ([Issue #26](https://github.com/thetechbenders/DragonSniff/issues/26)); DragonSniff itself still does not terminate TLS. Current and deferred container work is summarized in the [server and container status](docs/server-docker-roadmap.md).
 
 > **Is this scope creep? Yes. Anyway.**
 
