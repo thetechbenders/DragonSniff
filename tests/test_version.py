@@ -9,7 +9,7 @@ from dragonsniff.server import DragonSniffHandler
 
 class VersionContractTests(TestCase):
     def test_source_tree_exports_release_version(self) -> None:
-        self.assertEqual(dragonsniff.__version__, "0.5.0rc1")
+        self.assertEqual(dragonsniff.__version__, "0.5.0")
 
     def test_package_metadata_uses_the_authoritative_version_module(self) -> None:
         project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
@@ -25,8 +25,8 @@ class VersionContractTests(TestCase):
         request = DragonClient._request("http://dragon.example/api/v2/info")
 
         self.assertEqual(
-            request.get_header("User-agent"), "DragonSniff/0.5.0rc1"
+            request.get_header("User-agent"), "DragonSniff/0.5.0"
         )
         self.assertEqual(
-            DragonSniffHandler.server_version, "DragonSniff/0.5.0rc1"
+            DragonSniffHandler.server_version, "DragonSniff/0.5.0"
         )

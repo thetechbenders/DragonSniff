@@ -1,5 +1,32 @@
 # Changelog
 
+## v0.5.0 — 2026-09-23
+
+### Added
+
+- Optional, read-only PrusaLink observation source: polls only `GET /api/v1/status`, appends normalized `source_observation` records to the existing timeline, and reports source health, printer state, bed actual/target, freshness, and last error. Disabled by default and paused during SSE Churn.
+- A bounded one-hour rolling retention reserve for PrusaLink observations on top of the existing 2,000-record live baseline, shared by memory-only and persistent observers.
+- A single `workflow_dispatch` release workflow for stable and RC releases: exact package-version match, full test gates, wheel build and clean install, immutable-SHA container smoke test, annotated tag, version promotion, GitHub Release with wheel, and `latest` promotion for stable releases only.
+- RC tag support in the container promotion workflow.
+- A documented, validated trusted-LAN HTTPS topology for evidence downloads (`docs/lan-https-validation.md`): a locally trusted certificate terminated in front of the loopback listener, forwarding `Host` and `Origin` unchanged.
+- MIT license file.
+
+### Fixed
+
+- Device-originated JSON containing lone surrogates no longer reaches local structured surfaces. Raw response text is kept unchanged as evidence; parsed data is `null` with a deterministic `parse_error`. Applies to `/api/v2/info`, `/api/v2/state`, `/api/v2/health`, HTTP/SSE rejection bodies, and SSE event data. Closes the v0.4.0 known limitation tracked in #33.
+- GHCR promotion `curl` calls use HTTP/1.1 with bounded retries, fixing a repeatable token-fetch transfer failure that blocked version promotion.
+
+### Validation
+
+- Brave HTTP-vs-HTTPS A/B test across localhost, LAN HTTP, and LAN HTTPS with Shields on and off: the insecure-download warning appears only for plain HTTP on a LAN address and is independent of Shields and response headers (#26).
+- Hardware use: two 8-hour Long Haul Thermal captures against a DragonBreath device completed with correct run identity, lease-expiry fail-safe handling, and zero HTTP/JSON failures.
+
+### Known limitations
+
+- DragonSniff itself still serves plain HTTP only. HTTPS requires the documented reverse-proxy topology.
+- Authentication and public or untrusted-network deployment remain unsupported.
+- `v0.5.0-rc.1` was tagged but never completed promotion or publication; `v0.5.0` supersedes it.
+
 ## v0.4.0 — 2026-09-08
 
 ### Added
