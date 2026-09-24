@@ -53,10 +53,29 @@ a release image. The GitHub Release attaches the validated wheel and records
 the wheel SHA256 and container manifest digest. GitHub supplies the normal
 source archives automatically.
 
-By default, GitHub-generated release notes are used. To curate notes in the
-repository, add `docs/releases/vX.Y.Z.md` or
-`docs/releases/vX.Y.Z-rc.N.md` in the reviewed version-bump commit. The workflow
-uses that file verbatim after the artifact identity header.
+## Release notes and title
+
+Curated notes live at `docs/releases/<tag>.md` and belong in the reviewed
+version-bump commit. The first line is the release title as a Markdown heading,
+using an em dash before the subtitle:
+
+```markdown
+# DragonSniff v0.5.0 — Connect the dots
+```
+
+Everything after that line is the release body. Do not add an `## Artifacts`
+section: the workflow appends one with the wheel, wheel SHA256, version
+container, immutable `sha-` container, and manifest digest. If the body has a
+`## Full changelog` section, the artifacts are inserted before it.
+
+- **Stable releases require curated notes.** Preflight fails before any tag is
+  created or any image is promoted if `docs/releases/vX.Y.Z.md` is missing,
+  has no subtitle, or has no body.
+- **Release candidates** may use curated notes, which are held to the same
+  rules. Without them, an RC is titled `DragonSniff vX.Y.Z-rc.N` and uses
+  GitHub-generated notes after the artifact section.
+
+Validate locally with `python scripts/release_notes.py check vX.Y.Z false`.
 
 ## Retry and recovery
 

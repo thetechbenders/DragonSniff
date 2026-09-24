@@ -80,6 +80,15 @@ jobs:
           echo "prerelease=$(jq -r .prerelease <<< "$release_json")" >> "$GITHUB_OUTPUT"
           echo "release_sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
+      - name: Validate release presentation
+        env:
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/release_notes.py check "$RELEASE_TAG" "$PRERELEASE"
+
       - name: Install DragonSniff
         run: python -m pip install .
 
@@ -270,9 +279,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          printf -v container_note \
-            'Immutable container: `%s:%s` (`%s`)\n\nWheel SHA256: `%s`' \
-            "$IMAGE_NAME" "$RELEASE_TAG" "$MANIFEST_DIGEST" "$WHEEL_SHA256"
           if release_json="$(gh release view "$RELEASE_TAG" --json isDraft,isPrerelease,tagName 2>/dev/null)"; then
             test "$(jq -r .tagName <<< "$release_json")" = "$RELEASE_TAG"
             test "$(jq -r .isDraft <<< "$release_json")" = false
@@ -289,18 +295,24 @@ jobs:
             if test "$PRERELEASE" = true; then
               prerelease_args+=(--prerelease)
             fi
-            curated_notes="docs/releases/$RELEASE_TAG.md"
-            if test -f "$curated_notes"; then
-              notes_file="$(mktemp)"
-              printf '%b\n\n' "$container_note" > "$notes_file"
-              cat "$curated_notes" >> "$notes_file"
+            title_file="$(mktemp)"
+            notes_file="$(mktemp)"
+            notes_mode="$(python scripts/release_notes.py render \
+              "$RELEASE_TAG" "$PRERELEASE" \
+              --image-name "$IMAGE_NAME" --release-sha "$RELEASE_SHA" \
+              --manifest-digest "$MANIFEST_DIGEST" \
+              --wheel-name "$WHEEL_NAME" --wheel-sha256 "$WHEEL_SHA256" \
+              --title-out "$title_file" --body-out "$notes_file")"
+            if test "$notes_mode" = curated; then
               gh release create "$RELEASE_TAG" "dist/$WHEEL_NAME" \
-                --verify-tag --title "DragonSniff $RELEASE_TAG" \
+                --verify-tag --title "$(cat "$title_file")" \
                 --notes-file "$notes_file" "${prerelease_args[@]}"
             else
+              # Generated notes are an RC-only fallback.
+              test "$PRERELEASE" = true
               gh release create "$RELEASE_TAG" "dist/$WHEEL_NAME" \
-                --verify-tag --title "DragonSniff $RELEASE_TAG" \
-                --generate-notes --notes "$container_note" \
+                --verify-tag --title "$(cat "$title_file")" \
+                --generate-notes --notes-file "$notes_file" \
                 "${prerelease_args[@]}"
             fi
           fi
