@@ -22,7 +22,7 @@ permissions:
   packages: write
 
 env:
-  IMAGE_NAME: ghcr.io/danielbrownjr/dragonsniff
+  IMAGE_NAME: ghcr.io/thetechbenders/dragonsniff
 
 concurrency:
   group: promote-container-${{ inputs.release_version }}
@@ -88,7 +88,7 @@ jobs:
             registry_token="$(curl --fail --silent --show-error \
               --http1.1 --retry 3 --retry-all-errors --retry-delay 2 \
               --user "$GITHUB_ACTOR:$GHCR_TOKEN" \
-              'https://ghcr.io/token?service=ghcr.io&scope=repository:danielbrownjr/dragonsniff:pull,push' \
+              'https://ghcr.io/token?service=ghcr.io&scope=repository:thetechbenders/dragonsniff:pull,push' \
               | jq -r .token)"
             headers="$(mktemp)"
             status="$(curl --silent --show-error --output /dev/null \
@@ -97,7 +97,7 @@ jobs:
               --request HEAD \
               --header "Authorization: Bearer $registry_token" \
               --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
-              "https://ghcr.io/v2/danielbrownjr/dragonsniff/manifests/$RELEASE_VERSION")"
+              "https://ghcr.io/v2/thetechbenders/dragonsniff/manifests/$RELEASE_VERSION")"
             if test "$status" = 200; then
               target_digest="$(awk 'tolower($1) == "docker-content-digest:" {print $2}' "$headers" | tr -d '\r')"
               test -n "$target_digest"

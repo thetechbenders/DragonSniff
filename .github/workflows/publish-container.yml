@@ -37,7 +37,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_NAME: ghcr.io/danielbrownjr/dragonsniff
+  IMAGE_NAME: ghcr.io/thetechbenders/dragonsniff
 
 jobs:
   publish:

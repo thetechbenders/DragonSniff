@@ -11,6 +11,10 @@
 - A documented, validated trusted-LAN HTTPS topology for evidence downloads (`docs/lan-https-validation.md`): a locally trusted certificate terminated in front of the loopback listener, forwarding `Host` and `Origin` unchanged.
 - MIT license file.
 
+### Changed
+
+- Container images are published to `ghcr.io/thetechbenders/dragonsniff` after the repository moved to The TechBenders organization. `ghcr.io/danielbrownjr/dragonsniff` is legacy and frozen; update Portainer and Compose `image:` references.
+
 ### Fixed
 
 - Device-originated JSON containing lone surrogates no longer reaches local structured surfaces. Raw response text is kept unchanged as evidence; parsed data is `null` with a deterministic `parse_error`. Applies to `/api/v2/info`, `/api/v2/state`, `/api/v2/health`, HTTP/SSE rejection bodies, and SSE event data. Closes the v0.4.0 known limitation tracked in #33.

@@ -18,7 +18,7 @@ prerelease forms are not supported.
 
 1. Merge a reviewable version bump to `X.Y.ZrcN` into `main`.
 2. Wait for CI and the main-branch **Publish container** run to succeed. That
-   run creates `ghcr.io/danielbrownjr/dragonsniff:sha-<full-commit-sha>`.
+   run creates `ghcr.io/thetechbenders/dragonsniff:sha-<full-commit-sha>`.
 3. Run **Release** from `main` and enter `X.Y.ZrcN`.
 4. Verify the resulting GitHub Release is marked as a prerelease and the GHCR
    version tag is `vX.Y.Z-rc.N`.
