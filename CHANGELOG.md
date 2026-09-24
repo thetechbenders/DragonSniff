@@ -18,7 +18,7 @@
 ### Fixed
 
 - Device-originated JSON containing lone surrogates no longer reaches local structured surfaces. Raw response text is kept unchanged as evidence; parsed data is `null` with a deterministic `parse_error`. Applies to `/api/v2/info`, `/api/v2/state`, `/api/v2/health`, HTTP/SSE rejection bodies, and SSE event data. Closes the v0.4.0 known limitation tracked in #33.
-- GHCR promotion `curl` calls use HTTP/1.1 with bounded retries, fixing a repeatable token-fetch transfer failure that blocked version promotion.
+- GHCR version promotion no longer stalls on a first release. The manifest-existence probe sent `--request HEAD`, which made curl wait for a response body that a HEAD reply never carries; it now uses `--head`. Promotion `curl` calls also use HTTP/1.1 with bounded retries.
 
 ### Validation
 
