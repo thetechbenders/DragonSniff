@@ -16,7 +16,7 @@ Replace the two placeholder addresses before deploying:
 ```yaml
 services:
   dragonsniff:
-    image: ghcr.io/danielbrownjr/dragonsniff:latest
+    image: ghcr.io/thetechbenders/dragonsniff:latest
     init: true
     restart: unless-stopped
     read_only: true
@@ -68,8 +68,14 @@ These lines extend the matching `environment` and `volumes` sections in the stac
 
 The public image requires no Portainer registry credentials:
 
-- `ghcr.io/danielbrownjr/dragonsniff:latest` follows the newest stable release whose immutable image passed runtime validation. Release candidates do not move it.
-- `ghcr.io/danielbrownjr/dragonsniff:sha-<full-commit-sha>` pins one immutable build.
+- `ghcr.io/thetechbenders/dragonsniff:latest` follows the newest stable release whose immutable image passed runtime validation. Release candidates do not move it.
+- `ghcr.io/thetechbenders/dragonsniff:sha-<full-commit-sha>` pins one immutable build.
+
+### Migrating from the legacy image
+
+DragonSniff moved to The TechBenders organization. Images are now published to `ghcr.io/thetechbenders/dragonsniff`.
+
+The previous package, `ghcr.io/danielbrownjr/dragonsniff`, is legacy and frozen. It remains available at its last published state but receives no further releases, including `latest`. To migrate, change the stack's `image:` line from `ghcr.io/danielbrownjr/dragonsniff:<tag>` to `ghcr.io/thetechbenders/dragonsniff:<tag>` and redeploy. Keep the same volume declaration so existing evidence is preserved.
 
 To upgrade, pull the newest image and redeploy the stack. The named volume preserves evidence. For a reproducible deployment or rollback, replace `latest` with the desired full SHA tag and redeploy; keep the same volume declaration.
 
