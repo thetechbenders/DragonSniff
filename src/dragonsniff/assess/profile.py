@@ -58,8 +58,8 @@ class Check:
     signal: str
     window: Window
     predicate: dict[str, Any] | None
-    band: tuple[float, float] | None
-    min_fraction: float | None
+    band: tuple[int | float, int | float] | None
+    min_fraction: int | float | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,7 +69,7 @@ class Profile:
     sha256: str
     byte_length: int
     max_hold_ns: int
-    max_hold_s: float
+    max_hold_s: int | float
     signals: dict[str, Signal]
     checks: tuple[Check, ...]
 
@@ -86,12 +86,12 @@ def _keys(where: str, table: object, required: set[str], optional: set[str]) -> 
     return table
 
 
-def _number(where: str, value: object) -> float:
+def _number(where: str, value: object) -> int | float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ProfileError(f"{where} must be a number")
-    if not math.isfinite(value):
+    if isinstance(value, float) and not math.isfinite(value):
         raise ProfileError(f"{where} must be finite")
-    return float(value)
+    return value
 
 
 def _string(where: str, value: object) -> str:
@@ -107,11 +107,15 @@ def _pointer(where: str, value: object) -> str:
     return text
 
 
-def _seconds_to_ns(where: str, value: object) -> int:
+def _seconds_to_ns(where: str, value: object, *, ceiling: bool = False) -> int:
     seconds = _number(where, value)
     if seconds < 0:
         raise ProfileError(f"{where} must not be negative")
-    return round(seconds * 1_000_000_000)
+    # Preserve integers and avoid an intermediate rounded/overflowing float
+    # multiplication. Float seconds mean the exact binary value TOML parsed.
+    numerator, denominator = seconds.as_integer_ratio()
+    quotient, remainder = divmod(numerator * 1_000_000_000, denominator)
+    return quotient + int(ceiling and remainder != 0)
 
 
 def _signal(signal_id: str, table: object) -> Signal:
@@ -156,12 +160,14 @@ def _signal(signal_id: str, table: object) -> Signal:
 
 def _window(where: str, table: object) -> Window:
     fields = _keys(where, table, set(), {"start_offset_s", "end_offset_s"})
-    start = _seconds_to_ns(f"{where}.start_offset_s", fields.get("start_offset_s", 0))
+    raw_start = _number(f"{where}.start_offset_s", fields.get("start_offset_s", 0))
+    start = _seconds_to_ns(f"{where}.start_offset_s", raw_start)
     end = None
     if "end_offset_s" in fields:
-        end = _seconds_to_ns(f"{where}.end_offset_s", fields["end_offset_s"])
-        if end <= start:
+        raw_end = _number(f"{where}.end_offset_s", fields["end_offset_s"])
+        if raw_end <= raw_start:
             raise ProfileError(f"{where}: end_offset_s must exceed start_offset_s")
+        end = _seconds_to_ns(f"{where}.end_offset_s", raw_end, ceiling=True)
     return Window(start, end)
 
 
@@ -265,7 +271,7 @@ def load_profile(data: bytes) -> Profile:
         version=_string("version", fields["version"]),
         sha256=hashlib.sha256(data).hexdigest(),
         byte_length=len(data),
-        max_hold_ns=round(max_hold_s * 1_000_000_000),
+        max_hold_ns=_seconds_to_ns("assumptions.max_hold_s", max_hold_s),
         max_hold_s=max_hold_s,
         signals=signals,
         checks=checks,

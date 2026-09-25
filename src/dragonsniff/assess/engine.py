@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Any
+from typing import Any, Iterator
 
 from .evidence import Evidence
 from .profile import Check, Profile, Signal
@@ -58,7 +58,7 @@ def _is_number(value: object) -> bool:
     return (
         isinstance(value, (int, float))
         and not isinstance(value, bool)
-        and math.isfinite(value)
+        and (isinstance(value, int) or math.isfinite(value))
     )
 
 
@@ -75,8 +75,11 @@ def _extract(document: object, signal: Signal) -> tuple[bool, Any]:
     reference = _resolve(document, signal.reference_pointer)
     if not _is_number(value) or reference is _MISSING or not _is_number(reference):
         return False, None
-    difference = value - reference
-    if not math.isfinite(difference):
+    try:
+        difference = value - reference
+    except OverflowError:
+        return False, None
+    if not _is_number(difference):
         return False, None
     return True, difference
 
@@ -84,21 +87,46 @@ def _extract(document: object, signal: Signal) -> tuple[bool, Any]:
 # --- Observation extraction -------------------------------------------------
 
 
+def _run_records(evidence: Evidence) -> Iterator[dict[str, Any]]:
+    """Only this run's records inside both its sequence and time horizon."""
+    run = evidence.run
+    if run.problem is not None or run.started is None or run.terminal is None:
+        return
+    for record in evidence.records:
+        if (run.started["sequence"] <= record["sequence"] <= run.terminal["sequence"]
+                and run.started["monotonic_ns"] <= record["monotonic_ns"] <= run.terminal["monotonic_ns"]
+                and record.get("run_id") == run.run_id):
+            yield record
+
+
+def _error_free(record: dict[str, Any]) -> bool:
+    # Non-null error fields always win over an apparently usable payload.
+    return all(record.get(key) is None for key in
+               ("parse_error", "decode_error", "parse_error_kind", "error"))
+
+
 def _dragon_attempts(evidence: Evidence, signal: Signal) -> list[Attempt]:
-    run_id = evidence.run.run_id
     requests: dict[object, list[dict[str, Any]]] = {}
     completions: dict[object, list[dict[str, Any]]] = {}
-    for record in evidence.records:
+    unidentified: list[dict[str, Any]] = []
+    for record in _run_records(evidence):
         if record.get("endpoint") != signal.endpoint:
             continue
-        if run_id is not None and record.get("run_id") != run_id:
+        request_id = record.get("request_id")
+        if (isinstance(request_id, bool) or not isinstance(request_id, (str, int))
+                or request_id == ""):
+            if record["kind"] in DRAGON_COMPLETIONS or record["kind"] == "http_request":
+                unidentified.append(record)
             continue
         if record["kind"] == "http_request":
-            requests.setdefault(record.get("request_id"), []).append(record)
+            requests.setdefault(request_id, []).append(record)
         elif record["kind"] in DRAGON_COMPLETIONS:
             completions.setdefault(record.get("request_id"), []).append(record)
 
-    attempts: list[Attempt] = []
+    attempts: list[Attempt] = [
+        Attempt(r["monotonic_ns"], r["monotonic_ns"], r["sequence"], r["sequence"], None, False)
+        for r in unidentified
+    ]
     for request_id in requests.keys() | completions.keys():
         opened = requests.get(request_id, [])
         closed = completions.get(request_id, [])
@@ -111,6 +139,7 @@ def _dragon_attempts(evidence: Evidence, signal: Signal) -> list[Attempt]:
                 ordered
                 and completion["kind"] == "http_response"
                 and completion.get("ok") is True
+                and _error_free(completion)
                 and isinstance(completion.get("parsed"), dict)
             ):
                 valid, value = _extract(completion["parsed"], signal)
@@ -132,7 +161,7 @@ def _dragon_attempts(evidence: Evidence, signal: Signal) -> list[Attempt]:
 
 def _prusalink_attempts(evidence: Evidence, signal: Signal) -> list[Attempt]:
     attempts: list[Attempt] = []
-    for record in evidence.records:
+    for record in _run_records(evidence):
         if record["kind"] != "source_observation" or record.get("source") != "prusalink":
             continue
         if signal.source_id is not None and record.get("source_id") != signal.source_id:
@@ -140,12 +169,12 @@ def _prusalink_attempts(evidence: Evidence, signal: Signal) -> list[Attempt]:
         end = record["monotonic_ns"]
         start = record.get("observed_monotonic_ns")
         sequence = record["sequence"]
-        if isinstance(start, bool) or not isinstance(start, int) or start > end:
+        if isinstance(start, bool) or not isinstance(start, int) or start < 0 or start > end:
             attempts.append(Attempt(end, end, sequence, sequence, None, False))
             continue
         valid, value = False, None
         data = record.get("data")
-        if record.get("source_state") == "healthy" and isinstance(data, dict):
+        if record.get("source_state") == "healthy" and _error_free(record) and isinstance(data, dict):
             valid, value = _extract(data, signal)
         attempts.append(Attempt(start, end, sequence, sequence, value, valid))
     return attempts
@@ -295,11 +324,13 @@ def _window(evidence: Evidence, check: Check) -> tuple[tuple[int, int] | None, l
     run = evidence.run
     if run.problem is not None:
         return None, [run.problem]
+    # Even an explicit window needs closure: a missing tail could contain a
+    # duplicate request, another run marker, or a different terminal horizon.
+    if run.terminal is None:
+        return None, ["run_not_terminated"]
     started = run.started["monotonic_ns"]
     start = started + check.window.start_offset_ns
     if check.window.end_offset_ns is None:
-        if run.terminal is None:
-            return None, ["run_not_terminated"]
         end = run.terminal["monotonic_ns"]
     else:
         end = started + check.window.end_offset_ns
@@ -333,17 +364,21 @@ def evaluate(evidence: Evidence, profile: Profile, check: Check) -> dict[str, An
     start, end = window
     run = evidence.run
     started = run.started["monotonic_ns"]
-    terminal_sequence = run.terminal["sequence"] if run.terminal else None
-    horizon = run.terminal["monotonic_ns"] if run.terminal else None
+    terminal_sequence = run.terminal["sequence"]
+    horizon = run.terminal["monotonic_ns"]
 
     if check.kind == "holds_throughout":
         predicate = check.predicate
     else:
         predicate = {"op": "between", "low": check.band[0], "high": check.band[1]}
 
+    # A gap anywhere in the prefix could conceal a duplicate request id (or
+    # a run marker), invalidating otherwise apparently independent evidence.
+    # Suppress both holds and point violations, never just a final PASS label.
+    incomplete = evidence.missing_between(1, terminal_sequence)
     attempts = attempts_for(evidence, signal)
-    truths = [_truth(attempt, predicate) for attempt in attempts]
-    pieces = _pieces(
+    truths = [None if incomplete else _truth(attempt, predicate) for attempt in attempts]
+    pieces = [] if incomplete else _pieces(
         evidence, attempts, truths, profile.max_hold_ns, horizon, terminal_sequence
     )
     true_ns, false_ns, unknown_ns = _integrate(pieces, start, end)
@@ -362,7 +397,7 @@ def evaluate(evidence: Evidence, profile: Profile, check: Check) -> dict[str, An
         contained = attempt.start_ns >= start and attempt.end_ns <= end
         if truth is False:
             (violations if contained else edge_violations).append(attempt.last_sequence)
-        elif truth is None:
+        elif truth is None and not incomplete:
             unusable.append(attempt.last_sequence)
         if not attempt.valid:
             invalid.append(attempt.last_sequence)
@@ -376,12 +411,9 @@ def evaluate(evidence: Evidence, profile: Profile, check: Check) -> dict[str, An
         reasons.add("no_observations")
     if unusable:
         reasons.add("invalid_observations")
-    first_sequence = run.started["sequence"]
-    last_sequence = terminal_sequence if terminal_sequence is not None else evidence.records[-1]["sequence"]
-    if evidence.missing_between(first_sequence, last_sequence):
+    if incomplete:
         reasons.add("sequence_gap")
-    last_stamp = horizon if horizon is not None else evidence.records[-1]["monotonic_ns"]
-    if end > last_stamp:
+    if end > horizon:
         reasons.add("evidence_ended")
     if edge_violations:
         reasons.add("violation_at_window_edge")
@@ -437,10 +469,11 @@ def evaluate(evidence: Evidence, profile: Profile, check: Check) -> dict[str, An
             "fraction_in_band": {"lower": lower, "upper": upper},
             "fraction_of_known_in_band": (true_ns / known) if known else None,
         }
-        if lower >= check.min_fraction:
+        numerator, denominator = check.min_fraction.as_integer_ratio()
+        if true_ns * denominator >= numerator * window_ns:
             result = "PASS"
             reasons = set()
-        elif upper < check.min_fraction:
+        elif (window_ns - false_ns) * denominator < numerator * window_ns:
             result = "FAIL"
             reasons = set()
         else:

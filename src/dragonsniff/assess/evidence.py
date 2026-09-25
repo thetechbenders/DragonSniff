@@ -24,7 +24,7 @@ class Run:
     run_id: str | None
     started: dict[str, Any] | None
     terminal: dict[str, Any] | None
-    problem: str | None  # run_missing | run_ambiguous | None
+    problem: str | None  # run_missing | run_ambiguous | run_invalid | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,8 +92,6 @@ def _run(records: tuple[dict[str, Any], ...]) -> Run:
     starts = [r for r in records if r["kind"] == "capture_run_started"]
     if not starts:
         return Run(None, None, None, "run_missing")
-    if len(starts) > 1:
-        return Run(None, None, None, "run_ambiguous")
     started = starts[0]
     run_id = started.get("run_id") if isinstance(started.get("run_id"), str) else None
     terminals = [
@@ -101,9 +99,17 @@ def _run(records: tuple[dict[str, Any], ...]) -> Run:
         for r in records
         if r["kind"] in TERMINAL_KINDS and r["sequence"] > started["sequence"]
     ]
-    if len(terminals) > 1:
+    terminal = terminals[0] if terminals else None
+    # The first terminal closes this slice. Later records, including another
+    # run's markers or duplicate completions, cannot change its findings.
+    if any(terminal is None or r["sequence"] < terminal["sequence"] for r in starts[1:]):
         return Run(run_id, None, None, "run_ambiguous")
-    return Run(run_id, started, terminals[0] if terminals else None, None)
+    if terminal is not None and (
+        not run_id or terminal.get("run_id") != run_id
+        or terminal["monotonic_ns"] < started["monotonic_ns"]
+    ):
+        return Run(run_id, started, terminal, "run_invalid")
+    return Run(run_id, started, terminal, None)
 
 
 def load_evidence(data: bytes, metadata: bytes | None = None) -> Evidence:

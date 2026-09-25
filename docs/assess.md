@@ -59,6 +59,20 @@ disagree, the implementation is wrong.
 - **A missing sequence number is missing evidence.** Gaps are reported and can
   only make findings less certain, never more.
 
+### Completeness gate (semantics version 2)
+
+Assessment requires a closed run and a contiguous sequence prefix from **1
+through its terminal record**, even when the profile supplies an explicit end
+offset. Any gap in that prefix makes every check INCONCLUSIVE and the entire
+window unknown (time-in-band bounds `[0, 1]`). Neither held values nor point
+violations from an incomplete prefix decide a finding.
+
+This deliberately sacrifices partial assessments: a missing record could be a
+duplicate request/completion or run marker that invalidates apparently good
+evidence elsewhere. Checking gaps only between adjacent observations cannot
+guarantee deletion monotonicity. A missing terminal makes the window undefined;
+it must not let an explicit window assess a possibly truncated run.
+
 ## Observations
 
 A polled value was sampled at some unknown instant inside a known interval.
@@ -85,6 +99,12 @@ it is never coerced to false, zero, or any other value:
 - a PrusaLink observation whose `source_state` is not `healthy`
 - a malformed record, such as an unpaired request or response, a duplicated
   `request_id`, or a completion earlier than its request
+
+Any non-null `parse_error`, `decode_error`, `parse_error_kind`, or `error` field
+invalidates the observation, even with `ok = true` / `source_state = healthy`
+and a parsed payload. This applies to both sources, including wrongly typed
+error fields and empty strings. A Dragon request ID must be an integer (not a
+boolean) or a non-empty string; other IDs produce invalid attempts.
 
 ## Truth over time
 
@@ -136,10 +156,35 @@ This slice evaluates Thermal capture runs. A window is anchored to the run's
 - end: `started.monotonic_ns + end_offset_s`, or the terminal record's
   `monotonic_ns` when `end_offset_s` is omitted
 
-The window is **undefined**, and every finding is INCONCLUSIVE, if the file
-has no `capture_run_started`, has more than one, or needs a terminal record
-that is missing. Time after the terminal record, or after the last record, is
-unknown.
+The first `capture_run_started` begins the assessed run; the first terminal
+record after it closes the run. A second start before that terminal is
+ambiguous. A terminal with a different/missing run ID or a timestamp earlier
+than the start is invalid. Missing, ambiguous, invalid, or unterminated runs
+have an **undefined** window and every finding is INCONCLUSIVE.
+
+Only observations with the selected run ID, sequence inside its start/terminal
+boundaries, and record timestamps inside that time horizon are considered.
+Records after the terminal sequence cannot affect findings, including later
+run markers, duplicate request IDs, and records with backdated timestamps.
+They remain in the evidence identity/hash. The loader still validates JSON and
+core record integrity throughout the supplied file. Time after termination is
+unknown, including for point-violation detection.
+
+### Numeric precision and nanosecond rounding
+
+TOML integers stay exact integers in predicates, bands, and reports. Finite
+TOML floats retain the binary value returned by `tomllib`; the engine does not
+claim to recover decimal digits already lost when parsing a float literal.
+Use integer literals for exact large counters and integer thresholds.
+
+Seconds convert using the parsed number's exact integer ratio, multiplied by
+one billion using integer arithmetic. There is no intermediate floating-point
+multiplication. Holds and start offsets round **down** to integer nanoseconds;
+explicit end offsets round **up**. Thus a hold is never lengthened and a window
+is rounded outward. Original offsets must still be nonnegative and the end
+must exceed the start before rounding. A positive hold below one nanosecond
+becomes no-hold. The report echoes both `max_hold_s` and effective `max_hold_ns`;
+window fields contain the effective integer boundaries.
 
 ## Findings
 
@@ -177,22 +222,26 @@ would pass with no evidence at all. Against `min_fraction = p`:
 - **FAIL** only when the upper bound is below `p`
 - **INCONCLUSIVE** otherwise
 
-Durations are integer nanoseconds, so accumulation is exact. Fractions are
-computed once, from those integers.
+Durations are integer nanoseconds, so accumulation is exact. Decisions compare
+integer cross-products against the exact ratio of the parsed `min_fraction`.
+Displayed fractions are computed once from those integers and may be rounded;
+a displayed lower bound equal to the displayed threshold does not override
+the exact comparison.
 
 ### Reason codes
 
 | Code | Meaning |
 | --- | --- |
 | `run_missing` | No `capture_run_started` record. |
-| `run_ambiguous` | More than one `capture_run_started` record. |
-| `run_not_terminated` | The window needs a terminal record that is missing. |
+| `run_ambiguous` | Multiple starts before the first terminal, or in an unclosed run. |
+| `run_invalid` | The terminal has an inconsistent run ID or time. |
+| `run_not_terminated` | The run has no terminal, including with an explicit window. |
 | `window_empty` | The window has no duration. |
 | `no_hold_declared` | Strict no-hold leaves continuous time unknown. |
 | `coverage_incomplete` | Part of the window is unknown. |
 | `no_observations` | No observation attempt overlaps the window. |
 | `invalid_observations` | An attempt in the window carried no usable value. |
-| `sequence_gap` | Sequence numbers are missing within the run. |
+| `sequence_gap` | A sequence is missing from 1 through terminal; all time is unknown. |
 | `evidence_ended` | The window extends beyond the available evidence. |
 | `violation_at_window_edge` | A violating observation only partly overlaps the window. |
 | `held_violation` | False time exists only through a hold assumption, not a proven violation. |
@@ -217,6 +266,11 @@ INCONCLUSIVE. That is correct: the proof is gone. It is not a move toward
 PASS.
 
 The invariant is tested directly, not just implied by individual rules.
+
+It applies to record deletion with original sequence numbers preserved. Any
+deletion before the terminal leaves a prefix gap or removes required run
+structure; deleting trailing records leaves findings unchanged. It does not
+authenticate evidence against editing, renumbering, or fabricated records.
 
 ## Profile format
 

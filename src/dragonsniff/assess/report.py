@@ -11,7 +11,7 @@ from .evidence import Evidence
 from .profile import Profile
 
 ASSESSMENT_FORMAT = 1
-ASSESS_SEMANTICS_VERSION = 1
+ASSESS_SEMANTICS_VERSION = 2
 STATEMENT = (
     "PASS means the listed assertions were satisfied by sufficient captured "
     "evidence under this assessment profile. It is not a safety certification."
@@ -62,6 +62,7 @@ def build_report(
         "assumptions": {
             "hold": "bounded" if profile.max_hold_ns else "none",
             "max_hold_s": profile.max_hold_s,
+            "max_hold_ns": profile.max_hold_ns,
         },
         "summary": {
             result: sum(1 for f in findings if f["result"] == result)
