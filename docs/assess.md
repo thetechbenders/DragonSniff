@@ -188,7 +188,9 @@ window fields contain the effective integer boundaries.
 
 ## Findings
 
-Every finding is **PASS**, **FAIL**, or **INCONCLUSIVE**, with reason codes.
+Every finding is **PASS**, **FAIL**, or **INCONCLUSIVE**. INCONCLUSIVE
+findings carry reason codes explaining why the evidence is insufficient for a
+decisive result; PASS and FAIL findings carry no reason codes.
 
 ### `holds_throughout`
 
@@ -326,8 +328,8 @@ DragonSniff version always produce byte-identical output. A report records:
 - evidence SHA-256, byte length, record count, first and last sequence,
   sequence gaps, run identity, and session identity when supplied
 - assumptions, including the hold
-- per finding: result, reason codes, window, coverage, criteria, observation
-  counts, and the sequence numbers of decisive records
+- per finding: result, reason codes where applicable, window, coverage,
+  criteria, observation counts, and the sequence numbers of decisive records
 
 An assessment time appears only if the caller supplies one. It is report
 metadata and is never used in evaluation.
