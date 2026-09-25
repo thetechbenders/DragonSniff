@@ -61,7 +61,7 @@ Health observations track a present `boot_id`. A change is reported with the two
 6. Use **Download thermal capture JSONL** after each run. The stable download name is `dragonsniff-thermal-capture.jsonl`; add the firmware build and test condition when archiving it. This run-specific export remains available after live observation resumes.
 7. Repeat the same profile and physical test condition against the comparison build.
 
-The resulting JSONL supports later analysis of temperatures, targets, requested and delivered output, constraint reasons, heap, uptime, and boot identity when those fields are exposed by the product. DragonSniff preserves those values; it does not decide whether PID tuning, overshoot, settling time, or safety behavior passes. Acceptance criteria remain part of the product's validation plan.
+The resulting JSONL supports later analysis of temperatures, targets, requested and delivered output, constraint reasons, heap, uptime, and boot identity when those fields are exposed by the product. DragonSniff preserves those values and never defines what they should be. Acceptance criteria remain part of the product's validation plan; [Assess](assess.md) can evaluate a completed capture against criteria the product supplies, and its findings are derived output, not a safety certification.
 
 ## Traffic and lifecycle bounds
 
