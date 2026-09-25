@@ -138,6 +138,7 @@ The active-run downloads remain available. With persistent storage enabled, **Hi
 
 - [Getting started and concepts](https://github.com/thetechbenders/DragonSniff/wiki)
 - [Passive thermal capture](docs/thermal-capture.md)
+- [Assess: offline evidence assessment](docs/assess.md)
 - [Operator annotations](docs/operator-annotations.md)
 - [Optional PrusaLink observations](docs/prusalink-observation.md)
 - [Maintainer release process](docs/releasing.md)

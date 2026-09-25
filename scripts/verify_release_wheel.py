@@ -17,6 +17,7 @@ REQUIRED_PATHS = frozenset(
         "dragonsniff/__init__.py",
         "dragonsniff/__main__.py",
         "dragonsniff/_version.py",
+        "dragonsniff/assess/__init__.py",
         "dragonsniff/web/app.js",
         "dragonsniff/web/index.html",
         "dragonsniff/web/payload.js",
