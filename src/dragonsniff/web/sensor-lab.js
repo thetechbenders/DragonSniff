@@ -5,14 +5,15 @@
   const ns = "http://www.w3.org/2000/svg";
   let originals = Object.freeze([]), source = null, selected = null, a = null, b = null;
   let extent = null, view = null, interval = null, drag = null;
-  const fmt = (v, digits = 3) => v === null || v === undefined || !Number.isFinite(v) ? "unavailable" : Number(v.toFixed(digits)).toLocaleString("en-US");
+  let fileGeneration = 0;
+  const fmt = (v, digits = 3) => v === null || v === undefined || !Number.isFinite(v) ? "unavailable" : Number(v).toLocaleString("en-US", {maximumFractionDigits:digits});
   function svg(tag, attrs = {}, text) {
     const node = document.createElementNS(ns, tag);
     Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, String(v)));
     if (text !== undefined) node.textContent = text;
     return node;
   }
-  function message(text, error = false) { el("sensorMessage").textContent = text; el("sensorMessage").style.color = error ? "var(--bad)" : ""; }
+  function message(text, error = false) { el("sensorMessage").textContent = text; el("sensorMessage").classList.toggle("sensor-message-error", error); }
   function fieldList(data) {
     const dl = document.createElement("dl");
     Object.entries(data).forEach(([key, value]) => {
@@ -24,7 +25,7 @@
   }
   function showDetail() {
     const node = el("sensorDetail"); node.replaceChildren();
-    if (!selected) { node.textContent = "Select a retained sample."; return; }
+    if (!selected) { node.textContent = "Select a retained sample."; el("sensorCompare").textContent = "Choose A and B from imported records."; return; }
     node.append(fieldList({
       "Provenance": "Imported device measurement",
       "CSV row": selected.row, "Time (μs)": selected.timestamp_us,
@@ -35,6 +36,7 @@
     }));
     const c = core.compare(a, b), compare = el("sensorCompare"); compare.replaceChildren();
     if (!c) { compare.textContent = "Choose A and B from imported records."; return; }
+    if (c.cross_channel) { compare.textContent = "Different channels: elapsed time is observable, but measurement differences and apparent rate are unavailable. Choose two samples from one channel."; return; }
     compare.append(fieldList({
       "A / B rows": `${a.row} / ${b.row}`,
       "Δ time (s)": fmt(c.elapsed_us / 1e6, 6),
@@ -66,12 +68,12 @@
   }
   function plot() {
     const chart = el("sensorPlot"); chart.replaceChildren();
-    if (!view || !originals.length) { chart.append(svg("text", {x:24, y:36}, "Import a CSV to plot actual measurements.")); return; }
+    if (!view || !originals.length) { chart.append(svg("text", {x:24, y:36}, "Import a CSV to plot actual measurements.")); updateStats(); return; }
     const left = 72, right = 876, top = 30, bottom = 283;
     const channels = ["ptc", "chamber"].filter(c => el(c === "ptc" ? "showPtc" : "showChamber").checked);
     const metric = el("quantity").value;
     const visible = originals.filter(s => channels.includes(s.channel) && s.timestamp_us >= view[0] && s.timestamp_us <= view[1]);
-    const measured = visible.filter(s => s.status === "ok" && s[metric] !== null && s[metric] >= (metric === "temperature_c" ? -Infinity : 0));
+    const measured = visible.filter(s => core.available(s, metric));
     let lo = Math.min(...measured.map(s => s[metric])), hi = Math.max(...measured.map(s => s[metric]));
     if (!Number.isFinite(lo)) { lo = 0; hi = 1; }
     const pad = (hi - lo || 1) * 0.1; lo -= pad; hi += pad;
@@ -92,20 +94,20 @@
         segment = [];
       }
       channelPoints.forEach(s => {
-        const ok = s.status === "ok" && s[metric] !== null && s[metric] >= (metric === "temperature_c" ? -Infinity : 0);
+        const ok = core.available(s, metric);
         if (!ok) { flush(); return; }
         segment.push(`${x(s.timestamp_us)},${y(s[metric])}`);
       });
       flush();
       channelPoints.forEach(s => {
-        const ok = s.status === "ok" && s[metric] !== null && s[metric] >= (metric === "temperature_c" ? -Infinity : 0);
+        const ok = core.available(s, metric);
         const xx = x(s.timestamp_us), yy = ok ? y(s[metric]) : bottom - 3;
-        const p = ok ? svg("circle", {cx:xx,cy:yy,r:selected === s ? 6 : 3,class:`sample ${channel}`,tabindex:0,role:"button",
+        const p = ok ? svg("circle", {cx:xx,cy:yy,r:selected === s ? 6 : 3,class:`sample ${channel} ${s.status === "ok" ? "" : "classified"}`,"data-sample-row":s.row,tabindex:s === selected ? 0 : -1,role:"button",
           "aria-label":`Row ${s.row}, ${channel}, ${metric}: ${s[metric]}`}) :
-          svg("path", {d:`M${xx-4} ${yy-4}l8 8m-8 0l8 -8`,class:"invalid",role:"button",tabindex:0,
+          svg("path", {d:`M${xx-4} ${yy-4}l8 8m-8 0l8 -8`,class:"invalid","data-sample-row":s.row,role:"button",tabindex:s === selected ? 0 : -1,
             "aria-label":`Row ${s.row}, invalid ${s.status}`});
-        p.addEventListener("click", event => { event.stopPropagation(); inspect(s); });
-        p.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); inspect(s); } });
+        p.addEventListener("click", event => { event.stopPropagation(); inspect(s, "plot"); });
+        p.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); inspect(s, "plot"); } else if (event.key === "ArrowRight" || event.key === "ArrowLeft") { event.preventDefault(); const candidates = visible.filter(p => p.channel === channel); const next = candidates[Math.max(0, Math.min(candidates.length - 1, candidates.indexOf(s) + (event.key === "ArrowRight" ? 1 : -1)))]; if (next) inspect(next, "plot"); } });
         p.append(svg("title", {}, `Row ${s.row}: ${s.channel}, t=${s.timestamp_us} μs, ${metric}=${s[metric] ?? "blank"}, status=${s.status}`));
         chart.append(p);
       });
@@ -119,19 +121,23 @@
       chart.append(svg("line",{x1:x(selected.timestamp_us),x2:x(selected.timestamp_us),y1:top,y2:bottom,class:"marker","pointer-events":"none"}));
     updateStats();
   }
-  function inspect(s) { selected = s; showDetail(); list(); plot(); }
+  function inspect(s, origin = null) {
+    selected = s; showDetail(); list(); plot();
+    if (origin === "plot") el("sensorPlot").querySelector('[data-sample-row="' + s.row + '"]')?.focus();
+    if (origin === "table") el("sensorRows").querySelector('[data-sample-row="' + s.row + '"]')?.focus();
+  }
   function list() {
     const tbody = el("sensorRows"); tbody.replaceChildren();
     const metric = el("quantity").value;
     originals.filter(s => s.timestamp_us >= (view?.[0] ?? -Infinity) && s.timestamp_us <= (view?.[1] ?? Infinity))
       .forEach(s => {
         const tr = document.createElement("tr");
-        [s.timestamp_us, s.channel, s[metric] ?? "blank", s.status].forEach(value => {
+        [s.row, s.timestamp_us, s.channel, s.source_index, s[metric] ?? "blank", s.status].forEach(value => {
           const td = document.createElement("td"); td.textContent = String(value); tr.append(td);
         });
         const td = document.createElement("td"), button = document.createElement("button");
-        button.textContent = "Select"; button.type = "button"; button.setAttribute("aria-current", String(s === selected));
-        button.addEventListener("click", () => inspect(s)); td.append(button); tr.append(td); tbody.append(tr);
+        button.textContent = "Select"; button.type = "button"; button.dataset.sampleRow = String(s.row); button.setAttribute("aria-current", String(s === selected));
+        button.addEventListener("click", () => inspect(s, "table")); td.append(button); tr.append(td); tbody.append(tr);
       });
   }
   function redraw() { list(); plot(); }
@@ -142,27 +148,44 @@
     let center = (view[0] + view[1]) / 2 + direction * width * 0.22;
     center = Math.min(extent[1] - nextWidth / 2, Math.max(extent[0] + nextWidth / 2, center));
     view = [Math.round(center - nextWidth / 2), Math.round(center + nextWidth / 2)];
-    interval = null; redraw();
+    redraw();
   }
   function localX(event) { const r = el("sensorPlot").getBoundingClientRect(); return (event.clientX - r.left) / r.width * 900; }
   function timeX(event) { return Math.round(view[0] + (Math.max(72,Math.min(876,localX(event))) - 72) / 804 * (view[1]-view[0])); }
-  el("sensorPlot").addEventListener("pointerdown", event => { if (!view || event.target.closest(".sample")) return; drag = timeX(event); });
-  el("sensorPlot").addEventListener("pointerup", event => {
-    if (drag === null) return;
-    const end = timeX(event);
-    if (Math.abs(end - drag) > 0) interval = [Math.min(drag,end),Math.max(drag,end)];
-    drag = null; plot();
+  const chart = el("sensorPlot");
+  chart.addEventListener("pointerdown", event => {
+    drag = null;
+    if (!view || event.button !== 0 || event.target.hasAttribute("data-sample-row")) return;
+    drag = { pointerId: event.pointerId, originX: localX(event), time: timeX(event) };
+    chart.setPointerCapture(event.pointerId);
   });
+  chart.addEventListener("pointerup", event => {
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const start = drag;
+    drag = null;
+    if (chart.hasPointerCapture(event.pointerId)) chart.releasePointerCapture(event.pointerId);
+    if (Math.abs(localX(event) - start.originX) >= 5) {
+      const end = timeX(event);
+      interval = [Math.min(start.time,end),Math.max(start.time,end)];
+    }
+    plot();
+  });
+  chart.addEventListener("pointercancel", () => { drag = null; });
+  chart.addEventListener("lostpointercapture", () => { drag = null; });
   el("sensorPlot").addEventListener("wheel", event => { if (!view) return; event.preventDefault(); adjust(event.deltaY < 0 ? .75 : 1.33); }, {passive:false});
   el("sensorFile").addEventListener("change", async event => {
-    originals = Object.freeze([]); source = selected = a = b = extent = view = interval = null;
+    const generation = ++fileGeneration;
+    originals = Object.freeze([]); source = selected = a = b = extent = view = interval = drag = null;
+    el("sensorProvenance").textContent = "Provenance: no imported evidence. Sensor values are firmware-reported, not independently verified.";
     redraw(); showDetail(); el("exportAnalysis").disabled = true;
     const file = event.target.files?.[0]; if (!file) { message("No file selected."); return; }
     if (file.size > core.MAX_BYTES) { message("CSV exceeds the 128 KiB limit.", true); return; }
     try {
       const bytes = await file.arrayBuffer();
+      if (generation !== fileGeneration) return;
       const text = new TextDecoder("utf-8", {fatal:true}).decode(bytes);
       const parsed = core.parse(text);
+      if (generation !== fileGeneration) return;
       originals = parsed; source = {name:file.name, size_bytes:file.size};
       if (parsed.length) {
         extent = [parsed[0].timestamp_us,parsed[parsed.length-1].timestamp_us];
@@ -171,11 +194,11 @@
       message(`Imported ${parsed.length} retained measurements; ${parsed.length ? "ready to inspect" : "header-only empty capture"}.`);
       el("sensorProvenance").textContent = `Imported evidence: ${file.name} (${file.size} bytes). Original CSV remains outside DragonSniff storage; this is a session-only local copy.`;
       showDetail(); redraw();
-    } catch (error) { message(`Import rejected: ${error.message}`, true); }
+    } catch (error) { if (generation === fileGeneration) message(`Import rejected: ${error.message}`, true); }
   });
   ["quantity","showPtc","showChamber","statsChannel"].forEach(id =>
     el(id).addEventListener("change", redraw));
-  el("resetView").addEventListener("click", () => { if (extent) { view = [...extent]; interval = null; redraw(); } });
+  el("resetView").addEventListener("click", () => { if (extent) { view = [...extent]; redraw(); } });
   el("zoomIn").addEventListener("click", () => adjust(.5));
   el("zoomOut").addEventListener("click", () => adjust(2));
   el("panLeft").addEventListener("click", () => adjust(1,-1));
@@ -186,7 +209,7 @@
   el("exportAnalysis").addEventListener("click", () => {
     if (!source) return;
     const bounds = interval || view;
-    const report = {type:"Sensor Lab derived analysis", provenance:"Imported device measurements, local browser computation",
+    const report = {type:"Sensor Lab derived analysis", stats_bounds_us:bounds, provenance:"Imported device measurements, local browser computation",
       source, source_schema:core.HEADERS, selected_rows:{a:a?.row ?? null,b:b?.row ?? null},
       operator_interval_us:interval, plotted_view_us:view, metric:el("quantity").value,
       stats:["ptc","chamber"].map(channel => core.stats(originals,channel,el("quantity").value,bounds[0],bounds[1])),
