@@ -7,37 +7,7 @@
 <title>Sensor Lab · DragonSniff</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/style.css">
-<style>
-body { padding-left: 50px; }
-.sensor-layout { display:grid; grid-template-columns:minmax(0, 1fr) 290px; gap:12px; }
-.sensor-plot { width:100%; height:auto; background:var(--input); border:1px solid var(--border); border-radius:8px; touch-action:none; }
-.sensor-plot text { fill:var(--muted-foreground); font:12px ui-monospace,monospace; }
-.sensor-plot .axis { stroke:var(--border); }
-.sensor-plot .ptc { stroke:#df8b4b; fill:#df8b4b; }
-.sensor-plot .chamber { stroke:#58a6db; fill:#58a6db; }
-.sensor-plot .invalid { stroke:var(--bad); fill:none; stroke-width:2; }
-.sensor-plot .trace { fill:none; stroke-width:1.5; }
-.sensor-plot .sample { cursor:pointer; }
-.sensor-plot .sample:focus { outline: 2px solid var(--primary); }
-.sensor-plot .marker { stroke:var(--foreground); stroke-dasharray:4 3; }
-.sensor-controls { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:12px 0; }
-.sensor-controls label { display:flex; gap:6px; align-items:center; }
-.sensor-controls select,.sensor-controls input { max-width:180px; }
-.sensor-detail { overflow-wrap:anywhere; }
-.sensor-detail dl { display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; font:12px ui-monospace,monospace; }
-.sensor-detail dt { color:var(--muted-foreground); } .sensor-detail dd { margin:0; text-align:right; }
-.sensor-list { max-height:200px; overflow:auto; border:1px solid var(--border); border-radius:6px; }
-.sensor-list table { width:100%; border-collapse:collapse; font:12px ui-monospace,monospace; }
-.sensor-list td,.sensor-list th { padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); }
-.sensor-list button { font:inherit; padding:2px 5px; }
-.sensor-list [aria-current="true"] { outline:2px solid var(--primary); }
-.sensor-stat { display:grid; grid-template-columns:repeat(auto-fit,minmax(125px,1fr)); gap:10px; }
-.sensor-stat div { background:var(--input); padding:9px; border-radius:5px; }
-.sensor-stat span { display:block; color:var(--muted-foreground); font-size:11px; }
-.sensor-stat strong { font:13px ui-monospace,monospace; }
-.sensor-help { color:var(--muted-foreground); font-size:12px; }
-@media(max-width:800px) { .sensor-layout { grid-template-columns:1fr; } }
-</style>
+<link rel="stylesheet" href="/sensor-lab.css">
 </head>
 <body>
 <nav class="rail" aria-label="Navigation"><a class="tab" href="/" aria-label="DragonSniff dashboard" title="Dashboard">⌂</a><a class="tab" href="/sensor-lab" aria-current="page" aria-label="Sensor Lab" title="Sensor Lab">⌁</a></nav>
@@ -57,17 +27,17 @@ body { padding-left: 50px; }
 <label><input type="checkbox" id="showPtc" checked> PTC</label>
 <label><input type="checkbox" id="showChamber" checked> Chamber</label>
 <button id="zoomIn" type="button">Zoom +</button><button id="zoomOut" type="button">Zoom −</button>
-<button id="panLeft" type="button">←</button><button id="panRight" type="button">→</button>
+<button id="panLeft" type="button" aria-label="Pan graph left">←</button><button id="panRight" type="button" aria-label="Pan graph right">→</button>
 </div>
 <svg id="sensorPlot" class="sensor-plot" viewBox="0 0 900 330" aria-label="ADC measurements plotted against device monotonic microseconds"></svg>
-<p class="sensor-help">Click points to inspect. Drag horizontally to select a time interval; wheel to zoom; arrow buttons to pan. Crosses indicate invalid readings. Lines connect retained adjacent valid measurements only; no interpolation creates additional samples.</p>
+<p class="sensor-help">Click points to inspect. Drag horizontally to select a time interval; wheel to zoom; arrow buttons to pan. Crosses indicate unavailable values. Ringed points have non-OK sensor status but retained raw ADC data. Lines connect retained adjacent available measurements only; no interpolation creates additional samples.</p>
 <div class="sensor-layout">
-<div><h3>Imported measurements</h3><div class="sensor-list"><table><thead><tr><th>t (μs)</th><th>Channel</th><th>Value</th><th>Status</th><th>Inspect</th></tr></thead><tbody id="sensorRows"></tbody></table></div></div>
+<div><h3>Imported measurements</h3><div class="sensor-list"><table><thead><tr><th>CSV row</th><th>t (μs)</th><th>Channel</th><th>ADC input</th><th>Value</th><th>Status</th><th>Inspect</th></tr></thead><tbody id="sensorRows"></tbody></table></div></div>
 <aside class="sensor-detail"><h3>Selected original measurement</h3><div id="sensorDetail">Select a sample.</div><div class="sensor-controls"><button id="markA" type="button">Set A</button><button id="markB" type="button">Set B</button></div><h3>A / B comparison</h3><div id="sensorCompare">Select A and B samples.</div></aside>
 </div>
 </section>
 <section class="card"><h2>Interval statistics <span class="sensor-help">(derived, population σ)</span></h2>
-<div class="sensor-controls"><label>Channel <select id="statsChannel"><option value="ptc">PTC</option><option value="chamber">Chamber</option></select></label><button id="clearInterval" type="button">Whole capture interval</button><button id="exportAnalysis" type="button" disabled>Export analysis JSON</button></div>
+<div class="sensor-controls"><label>Channel <select id="statsChannel"><option value="ptc">PTC</option><option value="chamber">Chamber</option></select></label><button id="clearInterval" type="button">Clear selection (use visible range)</button><button id="exportAnalysis" type="button" disabled>Export analysis JSON</button></div>
 <p id="sensorInterval" class="sensor-help">No interval selected.</p><div id="sensorStats" class="sensor-stat"></div>
 <p class="sensor-help">Irregular intervals are flagged when longer than 1.5 × the observed median positive cadence. This heuristic is not proof of dropped samples. CSV buffer rollover cannot be reconstructed beyond retained history.</p>
 </section>
