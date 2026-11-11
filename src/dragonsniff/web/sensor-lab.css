@@ -1,0 +1,32 @@
+body { padding-left: 50px; }
+.sensor-layout { display:grid; grid-template-columns:minmax(0, 1fr) 290px; gap:12px; }
+.sensor-plot { width:100%; height:auto; background:var(--input); border:1px solid var(--border); border-radius:8px; touch-action:none; }
+.sensor-plot text { fill:var(--muted-foreground); font:12px ui-monospace,monospace; }
+.sensor-plot .axis { stroke:var(--border); }
+.sensor-plot .ptc { stroke:#df8b4b; fill:#df8b4b; }
+.sensor-plot .chamber { stroke:#58a6db; fill:#58a6db; }
+.sensor-plot .invalid { stroke:var(--bad); fill:none; stroke-width:2; }
+.sensor-plot .trace { fill:none; stroke-width:1.5; }
+.sensor-plot .sample { cursor:pointer; }
+.sensor-plot .sample:focus { outline: 2px solid var(--primary); }
+.sensor-plot .marker { stroke:var(--foreground); stroke-dasharray:4 3; }
+.sensor-controls { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:12px 0; }
+.sensor-controls label { display:flex; gap:6px; align-items:center; }
+.sensor-controls select,.sensor-controls input { max-width:180px; }
+.sensor-detail { overflow-wrap:anywhere; }
+.sensor-detail dl { display:grid; grid-template-columns:1fr 1fr; gap:6px 10px; font:12px ui-monospace,monospace; }
+.sensor-detail dt { color:var(--muted-foreground); } .sensor-detail dd { margin:0; text-align:right; }
+.sensor-list { max-height:200px; overflow:auto; border:1px solid var(--border); border-radius:6px; }
+.sensor-list table { width:100%; border-collapse:collapse; font:12px ui-monospace,monospace; }
+.sensor-list td,.sensor-list th { padding:5px 8px; text-align:left; border-bottom:1px solid var(--border); }
+.sensor-list button { font:inherit; padding:2px 5px; }
+.sensor-list [aria-current="true"] { outline:2px solid var(--primary); }
+.sensor-stat { display:grid; grid-template-columns:repeat(auto-fit,minmax(125px,1fr)); gap:10px; }
+.sensor-stat div { background:var(--input); padding:9px; border-radius:5px; }
+.sensor-stat span { display:block; color:var(--muted-foreground); font-size:11px; }
+.sensor-stat strong { font:13px ui-monospace,monospace; }
+.sensor-help { color:var(--muted-foreground); font-size:12px; }
+@media(max-width:800px) { .sensor-layout { grid-template-columns:1fr; } }
+.sensor-message-error { color:var(--bad); }
+.sensor-plot .classified { stroke:var(--bad); stroke-width:2; fill:none; }
+.sensor-plot .sample:focus-visible,.sensor-plot .invalid:focus-visible { stroke-width:3; outline:2px solid var(--primary); }
