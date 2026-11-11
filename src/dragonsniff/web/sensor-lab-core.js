@@ -41,7 +41,7 @@
   }
   function numeric(value, label, row, opts = {}) {
     if (value.trim() === "" && opts.blank) return null;
-    if (!/^-?(?:\d+)(?:\.\d+)?$/.test(value.trim())) throw Error(`Row ${row}: invalid ${label}`);
+    if (!(opts.integer ? /^-?\d+$/ : /^-?\d+(?:\.\d+)?$/).test(value)) throw Error(`Row ${row}: invalid ${label}`);
     const n = Number(value);
     if (!Number.isFinite(n) || (opts.integer && !Number.isSafeInteger(n)) ||
         (opts.min !== undefined && n < opts.min)) throw Error(`Row ${row}: invalid ${label}`);
@@ -73,7 +73,7 @@
       const rref_kohm = numeric(rref, "rref_kohm", line, { min: 0 });
       if (rref_kohm === 0) throw Error(`Row ${line}: invalid rref_kohm`);
       if (status !== "ok" && temperature_c !== null) throw Error(`Row ${line}: non-OK temperature must be blank`);
-      if (status === "ok" && (temperature_c === null || rawValue < 0 || millivolts < 0))
+      if (status === "ok" && (rawValue < 0 || millivolts < 0))
         throw Error(`Row ${line}: OK measurement is incomplete`);
       if (samples.length && timestamp_us < samples[samples.length - 1].timestamp_us)
         throw Error(`Row ${line}: timestamps are not monotonic`);
@@ -85,10 +85,16 @@
   function selected(samples, channel, start = -Infinity, end = Infinity) {
     return samples.filter(s => s.channel === channel && s.timestamp_us >= start && s.timestamp_us <= end);
   }
+  function available(sample, metric) {
+    if (sample[metric] === null || sample[metric] === undefined) return false;
+    return metric === "temperature_c"
+      ? sample.status === "ok" && Number.isFinite(sample.temperature_c)
+      : Number.isFinite(sample[metric]) && sample[metric] >= 0;
+  }
   function stats(samples, channel, metric = "temperature_c", start = -Infinity, end = Infinity) {
     if (!["raw", "millivolts", "temperature_c"].includes(metric)) throw Error("Unsupported metric");
     const all = selected(samples, channel, start, end);
-    const valid = all.filter(s => s.status === "ok" && s[metric] !== null && s[metric] >= (metric === "temperature_c" ? -Infinity : 0));
+    const valid = all.filter(s => available(s, metric));
     const values = valid.map(s => s[metric]); const times = all.map(s => s.timestamp_us);
     const gaps = []; const intervals = [];
     for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i - 1]);
@@ -102,7 +108,7 @@
     let largestChange = null;
     for (let i = 1; i < all.length; i++) {
       const a = all[i - 1], b = all[i];
-      if (a.status === "ok" && b.status === "ok" && a[metric] !== null && b[metric] !== null) {
+      if (available(a, metric) && available(b, metric)) {
         const d = Math.abs(b[metric] - a[metric]);
         largestChange = largestChange === null ? d : Math.max(largestChange, d);
       }
@@ -118,9 +124,9 @@
   }
   function compare(a, b) {
     if (!a || !b) return null;
+    if (a.channel !== b.channel) return { cross_channel: true, elapsed_us: b.timestamp_us - a.timestamp_us, raw_difference: null, millivolts_difference: null, temperature_difference_c: null, apparent_rate_c_per_s: null };
     const dt = b.timestamp_us - a.timestamp_us;
-    const delta = key => a[key] === null || b[key] === null || a[key] < (key === "temperature_c" ? -Infinity : 0) ||
-      b[key] < (key === "temperature_c" ? -Infinity : 0) || a.status !== "ok" || b.status !== "ok"
+    const delta = key => !available(a, key) || !available(b, key)
       ? null : b[key] - a[key];
     const d = { elapsed_us: dt, raw_difference: delta("raw"),
       millivolts_difference: delta("millivolts"), temperature_difference_c: delta("temperature_c") };
@@ -130,9 +136,9 @@
   }
   function graphPoints(samples, channel, metric, start, end) {
     return selected(samples, channel, start, end).map(s => ({
-      row: s.row, timestamp_us: s.timestamp_us, value: s.status === "ok" ? s[metric] : null,
-      valid: s.status === "ok", status: s.status
+      row: s.row, timestamp_us: s.timestamp_us, value: available(s, metric) ? s[metric] : null,
+      valid: available(s, metric), status: s.status
     }));
   }
-  return { HEADERS, MAX_BYTES, MAX_ROWS, parse, selected, stats, compare, graphPoints };
+  return { HEADERS, MAX_BYTES, MAX_ROWS, parse, selected, available, stats, compare, graphPoints };
 });
