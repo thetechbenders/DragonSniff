@@ -37,6 +37,7 @@
     }
     if (quoted) throw Error("Unclosed CSV quotation");
     if (field !== "" || row.length) { row.push(field); rows.push(row); }
+    while (rows.length && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === "") rows.pop();
     return rows;
   }
   function numeric(value, label, row, opts = {}) {
