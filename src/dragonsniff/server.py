@@ -60,6 +60,7 @@ STATIC_FILES = {
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/sensor-lab": ("sensor-lab.html", "text/html; charset=utf-8"),
+    "/sensor-lab.css": ("sensor-lab.css", "text/css; charset=utf-8"),
     "/sensor-lab.js": ("sensor-lab.js", "text/javascript; charset=utf-8"),
     "/sensor-lab-core.js": ("sensor-lab-core.js", "text/javascript; charset=utf-8"),
 }
