@@ -92,7 +92,7 @@
     const values = valid.map(s => s[metric]); const times = all.map(s => s.timestamp_us);
     const gaps = []; const intervals = [];
     for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i - 1]);
-    const sorted = [...intervals].sort((a, b) => a - b);
+    const sorted = intervals.filter(value => value > 0).sort((a, b) => a - b);
     const median = sorted.length ? (sorted[(sorted.length - 1) >> 1] + sorted[sorted.length >> 1]) / 2 : null;
     if (median !== null && median > 0) intervals.forEach((v, i) => {
       if (v > median * 1.5) gaps.push({ after_row: all[i].row, interval_us: v });
