@@ -87,6 +87,19 @@ class StitchTests(unittest.TestCase):
         self.assertEqual(len(timeline.samples), 1)
         self.assertEqual(timeline.boundaries[1].state, "continuity_unknown")
 
+    def test_schema_version_fails_closed(self):
+        saved = exchange([row(1)])
+        unsupported = Exchange(saved.device_id, saved.status_code, saved.headers,
+                               saved.body, schema_version=2)
+        timeline = stitch([saved, unsupported, saved])
+        self.assertEqual(timeline.rejected, ((1, "unsupported exchange schema version"),))
+        self.assertEqual(timeline.boundaries[2].state, "continuity_unknown")
+
+    def test_source_identity_is_carried_in_derived_samples(self):
+        timeline = stitch([exchange([row(1)]), exchange([row(1)], boot="boot2")])
+        self.assertEqual([(s.device_id, s.boot_id) for s in timeline.samples],
+                         [("device1", "boot1"), ("device1", "boot2")])
+
     def test_input_is_untouched(self):
         saved = exchange([row(1)])
         timeline = stitch([saved, saved])
