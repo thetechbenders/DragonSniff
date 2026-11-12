@@ -89,3 +89,61 @@ test("UTF-8 BOM and CRLF accepted without rewriting evidence",()=>{
   const s=core.parse("\ufeff"+H.replace("\n","\r\n")+row(0).replace("\n","\r\n"));
   assert.equal(s.length,1);
 });
+
+test("classified fault excursions remain available in ADC and voltage domains", () => {
+  const s = core.parse(H + row(0,"ptc","ok","10","10","20") +
+    row(500000,"ptc","open","4095","3134","") +
+    row(1000000,"ptc","ok","90","90","22"));
+  assert.deepEqual(core.graphPoints(s,"ptc","raw",0,1000000).map(p => p.value), [10,4095,90]);
+  assert.equal(core.stats(s,"ptc","raw").max,4095);
+  assert.equal(core.stats(s,"ptc","raw").peak_to_peak,4085);
+  assert.equal(core.stats(s,"ptc","millivolts").max,3134);
+  assert.equal(core.stats(s,"ptc","temperature_c").valid_count,2);
+  assert.equal(core.stats(s,"ptc","temperature_c").invalid_count,1);
+  assert.equal(core.graphPoints(s,"ptc","temperature_c",0,1000000)[1].value,null);
+});
+test("non-OK invalid ADC values are excluded but original state survives", () => {
+  const s=core.parse(H+row(0,"ptc","open","-1","-1","")+
+    row(500000,"ptc","short","4095","3134",""));
+  assert.equal(core.stats(s,"ptc","raw").valid_count,1);
+  assert.equal(core.stats(s,"ptc","raw").invalid_count,1);
+  assert.equal(s[0].status,"open");
+  assert.equal(s[1].status,"short");
+});
+test("cross-channel bookmarks do not produce physically meaningless rates", () => {
+  const s=core.parse(H+row(0,"ptc","ok","10","10","20")+
+    row(35,"chamber","ok","12","15","21","0"));
+  const result=core.compare(s[0],s[1]);
+  assert.equal(result.cross_channel,true);
+  assert.equal(result.elapsed_us,35);
+  assert.equal(result.temperature_difference_c,null);
+  assert.equal(result.apparent_rate_c_per_s,null);
+});
+test("same-channel sub-millisecond comparisons retain microsecond differences",()=>{
+  const s=core.parse(H+row(1000000)+row(1000035));
+  assert.equal(core.compare(s[0],s[1]).elapsed_us,35);
+});
+test("timestamp ties do not lower the positive cadence median",()=>{
+  const s=core.parse(H+row(0)+row(0)+row(500000)+row(1000000));
+  assert.equal(core.stats(s,"ptc").median_interval_us,500000);
+  assert.equal(core.stats(s,"ptc").tied_intervals,1);
+});
+test("parser accepts firmware OK rows lacking a converted temperature",()=>{
+  const s=core.parse(H+row(100,"ptc","ok","1000","900",""));
+  assert.equal(s[0].temperature_c,null);
+  assert.equal(core.stats(s,"ptc","raw").valid_count,1);
+  assert.equal(core.stats(s,"ptc","temperature_c").valid_count,0);
+});
+test("canonical integer forms required; blank trailing lines ignored",()=>{
+  for(const bad of [row("1.0"),row(" 1"),row("1","ptc","ok","1000.0")])
+    assert.throws(()=>core.parse(H+bad),/invalid/);
+  assert.equal(core.parse(H+row(0)+"\n\r\n").length,1);
+});
+test("only retained ring records contribute, no invented predecessors",()=>{
+  const times=Array.from({length:256},(_,i)=>5000000+i*500000);
+  const s=core.parse(H+times.map(t=>row(t)).join(""));
+  assert.equal(s[0].timestamp_us,5000000);
+  assert.equal(s[s.length-1].timestamp_us,132500000);
+  assert.equal(core.stats(s,"ptc").count,256);
+  assert.equal(core.graphPoints(s,"ptc","raw",0,999999999).length,256);
+});
