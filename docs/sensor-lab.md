@@ -48,6 +48,3 @@ This is not independent temperature verification, safety verification, or eviden
 
 `node --test tests/sensor-lab.test.cjs` covers parser boundaries, empty/invalid states, timestamps/ties, rollover examples, statistics, comparison, plot preparation, and retained-record integrity. Existing tests: `python -m unittest discover -s tests -v` and `node --test tests/payload.test.cjs`. Syntax checks: `node --check` for four JavaScript sources in CI (the existing `payload.js`/`app.js` and both Sensor Lab JS files). CI runs these alongside existing container and Python checks. Browser pointer/keyboard interactions and physical hardware measurements require independent manual acceptance and are **not** established by unit tests.
 
-## Initial independent review remediation
-
-Following Claude's first review of PR #53, remediate CSP-blocked styles, stale derived results on import reset, classified ADC excursions, cross-channel rates, stale drag gestures, and keyboard focus. These source and regression-test changes do not establish fresh browser acceptance; an independent focused browser re-check is still required.
