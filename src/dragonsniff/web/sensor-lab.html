@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Sensor Lab · DragonSniff</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css">
+<link rel="stylesheet" href="/sensor-lab.css">
+</head>
+<body>
+<nav class="rail" aria-label="Navigation"><a class="tab" href="/" aria-label="DragonSniff dashboard" title="Dashboard">⌂</a><a class="tab" href="/sensor-lab" aria-current="page" aria-label="Sensor Lab" title="Sensor Lab">⌁</a></nav>
+<header><div><p class="eyebrow">DragonSniff · Offline investigation</p><h1>Sensor Lab</h1><p class="lede">ADC evidence under the microscope. Observed signals, not verified element temperature.</p></div><span class="badge">Read-only · local import</span></header>
+<main>
+<section class="card">
+<h2>Import ADC capture</h2>
+<p>Choose a local DragonBreath diagnostic CSV. Nothing is uploaded, persisted, or sent to the device. Only the selected file is read into browser memory.</p>
+<label for="sensorFile">ADC capture CSV</label> <input id="sensorFile" type="file" accept=".csv,text/csv">
+<p id="sensorMessage" role="status" aria-live="polite">No evidence loaded.</p>
+<p class="sensor-help" id="sensorProvenance">Provenance: no imported evidence. Sensor values are firmware-reported, not independent measurements.</p>
+</section>
+<section class="card">
+<div class="endpoint-heading"><div><p class="eyebrow">Original monotonic time axis</p><h2>Sample traces</h2></div><button id="resetView" type="button">Reset view</button></div>
+<div class="sensor-controls">
+<label>Quantity <select id="quantity"><option value="temperature_c">Reported temperature (°C)</option><option value="raw">Raw ADC (counts)</option><option value="millivolts">Calibrated (mV)</option></select></label>
+<label><input type="checkbox" id="showPtc" checked> PTC</label>
+<label><input type="checkbox" id="showChamber" checked> Chamber</label>
+<button id="zoomIn" type="button">Zoom +</button><button id="zoomOut" type="button">Zoom −</button>
+<button id="panLeft" type="button" aria-label="Pan graph left">←</button><button id="panRight" type="button" aria-label="Pan graph right">→</button>
+</div>
+<svg id="sensorPlot" class="sensor-plot" viewBox="0 0 900 330" aria-label="ADC measurements plotted against device monotonic microseconds"></svg>
+<p class="sensor-help">Click points to inspect. Drag horizontally to select a time interval; wheel to zoom; arrow buttons to pan. Crosses indicate unavailable values. Ringed points have non-OK sensor status but retained raw ADC data. Lines connect retained adjacent available measurements only; no interpolation creates additional samples.</p>
+<div class="sensor-layout">
+<div><h3>Imported measurements</h3><div class="sensor-list"><table><thead><tr><th>CSV row</th><th>t (μs)</th><th>Channel</th><th>ADC input</th><th>Value</th><th>Status</th><th>Inspect</th></tr></thead><tbody id="sensorRows"></tbody></table></div></div>
+<aside class="sensor-detail"><h3>Selected original measurement</h3><div id="sensorDetail">Select a sample.</div><div class="sensor-controls"><button id="markA" type="button">Set A</button><button id="markB" type="button">Set B</button></div><h3>A / B comparison</h3><div id="sensorCompare">Select A and B samples.</div></aside>
+</div>
+</section>
+<section class="card"><h2>Interval statistics <span class="sensor-help">(derived, population σ)</span></h2>
+<div class="sensor-controls"><label>Channel <select id="statsChannel"><option value="ptc">PTC</option><option value="chamber">Chamber</option></select></label><button id="clearInterval" type="button">Clear selection (use visible range)</button><button id="exportAnalysis" type="button" disabled>Export analysis JSON</button></div>
+<p id="sensorInterval" class="sensor-help">No interval selected.</p><div id="sensorStats" class="sensor-stat"></div>
+<p class="sensor-help">Irregular intervals are flagged when longer than 1.5 × the observed median positive cadence. This heuristic is not proof of dropped samples. CSV buffer rollover cannot be reconstructed beyond retained history.</p>
+</section>
+</main>
+<script src="/sensor-lab-core.js"></script>
+<script src="/sensor-lab.js"></script>
+</body>
+</html>
