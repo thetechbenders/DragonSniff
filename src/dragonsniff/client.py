@@ -10,9 +10,10 @@ from threading import BoundedSemaphore, Event, Lock
 import time
 from typing import Any, Callable, Iterator
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from ._version import __version__
+from .http import open_device_request
 from .recording import SessionRecorder
 from .target import DeviceTarget
 
@@ -165,7 +166,7 @@ class DragonClient:
         sse_connect_timeout: float = 5.0,
         max_response_bytes: int = 1_048_576,
         max_event_bytes: int = 262_144,
-        opener: Callable[..., Any] = urlopen,
+        opener: Callable[..., Any] = open_device_request,
     ) -> None:
         self.target = target
         self.recorder = recorder
