@@ -9,7 +9,7 @@ or talk to a device. It does not authorize live ADC acquisition.
 The caller supplies an **ordered sequence** of immutable Exchange objects.
 Each object contains device_id (externally attributed identity), HTTP
 status_code, ordered (name, value) response headers (including duplicates),
-original response body bytes, and an optional transport error. Keeping these
+original response body bytes, optional transport error, and explicit schema_version=1. Keeping these
 fields is the proposed **in-memory** contract, not an on-disk format and not
 evidence authentication. The caller remains responsible for preserving the
 original saved HTTP exchanges.
@@ -21,7 +21,7 @@ UTF-8/BOM, CRLF, 128 KiB and 256-row limits follow M1. Header-only responses
 are valid but contain no samples. The provisional firmware emits one physical
 line per sample; multi-line quoted cells are not supported by this parser.
 
-Each parsed sample carries the originating exchange index, source row number,
+Each stitched sample carries the attributed device and boot identity, originating exchange index, source row number,
 physical source_index, logical channel, original row bytes and reported
 measurements. Temperature is a reported firmware conversion, **not** an
 independent thermometer. Non-OK rows can retain raw counts and millivolts.
@@ -53,7 +53,7 @@ values and externally supplied identity are not cryptographic attestation.
 Loss counts are unavailable without firmware sequence/total-pushed metadata.
 
 The returned Timeline(samples, boundaries, rejected) is derived output.
-Failed and malformed exchanges are explicitly identified by index and do not
+Unsupported exchange schema versions, failed and malformed exchanges are explicitly identified by index and do not
 create fabricated samples. A caller must retain original exchanges elsewhere.
 The current implementation assumes input exchanges arrive in the caller's
 recorded order; it does not reorder events using untrusted device time.
