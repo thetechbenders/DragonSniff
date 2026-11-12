@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, InvalidOperation
 import csv
 import io
@@ -38,6 +38,7 @@ class Exchange:
     headers: tuple[tuple[str, str], ...]
     body: bytes
     error: str | None = None
+    schema_version: int = 1
 
 
 @dataclass(frozen=True)
@@ -53,6 +54,8 @@ class Sample:
     status: str
     rref_kohm: Decimal
     original_row: bytes
+    device_id: str | None = None
+    boot_id: str | None = None
 
     @property
     def identity(self) -> tuple[int, str]:
@@ -193,6 +196,11 @@ def stitch(exchanges: Iterable[Exchange]) -> Timeline:
     for number, exchange in enumerate(exchanges):
         if not isinstance(exchange, Exchange):
             raise TypeError("expected Exchange instances")
+        if exchange.schema_version != 1:
+            rejected.append((number, "unsupported exchange schema version"))
+            boundaries.append(Boundary(number, "continuity_unknown", "unsupported exchange schema version"))
+            prior, seen, identity, uncertain = (), {}, None, True
+            continue
         boot = _unique_header(exchange.headers, "X-DragonBreath-Boot-ID")
         current_identity = (exchange.device_id, boot) if exchange.device_id and boot else None
         if exchange.error is not None or exchange.status_code != 200 or current_identity is None:
@@ -234,6 +242,7 @@ def stitch(exchanges: Iterable[Exchange]) -> Timeline:
             boundaries.append(Boundary(number, state, "conflicting overlap" if contradictory else
                                        "byte-identical overlap includes prior tail" if continuous else "no proven overlap"))
         identity = current_identity
+        samples = tuple(replace(sample, device_id=identity[0], boot_id=identity[1]) for sample in samples)
         local_keys: dict[tuple[int, str], Sample] = {}
         contradiction = False
         for sample in samples:
