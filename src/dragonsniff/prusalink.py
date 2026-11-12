@@ -14,7 +14,7 @@ import time
 import traceback
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
 
 from ._version import __version__
 from .client import (
@@ -23,6 +23,7 @@ from .client import (
     _parse_decoded_json,
     _read_bounded,
 )
+from .http import open_device_request
 from .recording import SessionRecorder
 from .target import TargetValidationError, parse_target
 
@@ -232,7 +233,7 @@ class PrusaLinkSource:
         config: PrusaLinkConfig,
         recorder: SessionRecorder,
         *,
-        opener: Callable[..., Any] = urlopen,
+        opener: Callable[..., Any] = open_device_request,
         request_timeout: float = DEFAULT_REQUEST_TIMEOUT_SECONDS,
         max_response_bytes: int = MAX_RESPONSE_BYTES,
         monotonic_ns: Callable[[], int] = time.monotonic_ns,
