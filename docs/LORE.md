@@ -301,6 +301,213 @@ that evidence is evidence.
 
 ---
 
+### The Margins Begin to Speak
+
+The keepers had long written what the dragons said,
+but sometimes a keeper needed to say:
+
+> That noise was the fan.
+> That spike was the oscilloscope.
+> That other noise was me dropping the probe.
+
+So the margin learned to speak.
+
+**Operator Annotations** entered the same ordered scroll
+as the measurements they accompanied.
+A note could survive a lost browser,
+a fallen process,
+and a second attempt to write the same note.
+
+A second attempt was not a second event.
+A changed tale was not the same tale.
+And when the archive could not tell which note was meant,
+it refused to guess.
+
+Elsewhere, a printer knocked at the window.
+
+It called itself **PrusaLink**,
+and requested no throne,
+only a place in the observation queue.
+
+The Sniffer asked for status,
+accepted what could be established,
+and marked the rest unknown.
+The printer brought its own freshness,
+its own errors,
+and its own bounded share of memory.
+
+The dragon's stream and the printer's replies
+entered one chronology,
+without pretending to share one clock.
+
+Neither machine was allowed to confuse
+being observed
+with being commanded.
+
+### Of Seals, Names, and the Anxious Browser
+
+In time the keepers grew tired of rebuilding a kingdom
+whenever they wanted to release a lantern.
+
+They gave releases a ceremony:
+first the exact artifact,
+then its digest,
+then its immutable image,
+and only afterward the names by which travelers would summon it.
+
+A release candidate was permitted to be uncertain.
+`latest` was not.
+
+When the house moved beneath the banner of **The TechBenders**,
+the old image registry refused the new credentials.
+The release gate did precisely what a good gate does:
+
+it stayed shut.
+
+So the image was moved to the house that could publish it.
+The seal kept its meaning.
+No one declared a missing artifact present
+simply to make the ceremony shorter.
+
+And Brave, that nervous sentinel,
+was finally shown a proper encrypted road in a LAN trial.
+Under HTTPS, the download warning relented.
+This established what the trial established,
+not that every road in the kingdom had already been paved.
+
+The bards considered this a rare victory
+for both transport security
+and the browser's capacity to stop shouting.
+
+### The Court of What Can Be Proven
+
+Then came **Assess**,
+which was immediately misunderstood
+by everyone who wanted a large green PASS.
+
+The new court received finished evidence
+and criteria supplied by the product.
+It could judge what the record supported.
+
+But the court did not write the law.
+The Sniffer did not become a safety controller.
+And a PASS was not a certificate
+that a heater had suddenly become wise.
+
+A polling interval was an interval,
+not a magical point in time.
+An absent sample was unknown,
+not zero.
+A missing piece of evidence
+could not be used to improve the verdict.
+
+The court's most important word
+was sometimes **INCONCLUSIVE**.
+
+There was grumbling.
+
+The court wrote down the grumbling
+and declined to score it.
+
+### The Disputation of Sampson and Abraham
+
+At the edge of the thermal archive
+lived **Abraham**,
+a PTC/ADC signal of highly variable disposition.
+
+Abraham had been measured at one value,
+then another,
+then a number so close to the rail
+that even the oscilloscope raised an eyebrow.
+
+He insisted that every number was true.
+
+**Sampson**, keeper of the Sniffer's lantern,
+regarded the scroll.
+
+> You are classified open.
+
+> I prefer *electrically expansive*, said Abraham.
+
+> Your raw count is 4095.
+
+> A magnificent number.
+
+> It is a number, said Sampson.
+> It is not independent proof of your temperature.
+
+Abraham went briefly to `-1`,
+which was his usual response to criticism.
+
+Sampson did not replace the missing value with zero.
+He did not draw a smooth line through the silence.
+He kept the raw count when it existed,
+the status that came with it,
+and the blank where the temperature could not be known.
+
+> Then my sudden changes must be mains interference,
+> Abraham declared.
+
+> You are sampled at roughly two hertz per channel.
+
+> Exactly. Very rhythmic.
+
+> That cadence cannot uniquely identify fifty or sixty hertz.
+
+> You take all the wonder out of science.
+
+> I take the certainty out of things
+> that have not been demonstrated.
+
+This argument lasted for several captures
+and no fewer than three implausible temperatures.
+
+At last **Sensor Lab** opened its doors.
+
+Its bench was entirely local.
+The CSV entered from the keeper's own hand.
+No device received a command.
+No heater stirred.
+The original measurements were not rewritten
+to make the graph prettier.
+
+Sampson could inspect each retained sample,
+look at raw counts and millivolts,
+compare two moments from the same channel,
+and ask what changed inside a chosen interval.
+
+An `open` classification did not erase
+a real ADC rail excursion.
+A blank temperature did not become a measurement.
+Two different channels were not coaxed
+into one imaginary heating rate.
+
+Abraham looked at the chart.
+
+> You have made me look unstable.
+
+> I have made you visible.
+
+> And the red rings?
+
+> Also yours.
+
+The Sniffer, who had heard this entire exchange,
+wrote down exactly what happened.
+
+It did not diagnose the wiring.
+It did not blame the mains.
+It did not touch the lever.
+
+Sampson smiled.
+
+> The evidence is allowed to be strange.
+
+> Finally, said Abraham.
+> Something we agree on.
+
+---
+
 ### The Rule of the Bards
 
 The Chronicle is amended only when the dragon gains a new power,
